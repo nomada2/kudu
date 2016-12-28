@@ -91,7 +91,15 @@ namespace Kudu.Core
 
             _tempPath = Path.GetTempPath();
             _repositoryPath = repositoryPath;
-            _webRootPath = Path.Combine(SiteRootPath, Constants.WebRoot);
+            _webRootPath = System.Environment.GetEnvironmentVariable("SCM_TARGET_PATH");
+            if (!String.IsNullOrEmpty(_webRootPath))
+            {
+                _webRootPath = _webRootPath.Trim('\\', '/');
+                _webRootPath = Path.Combine(SiteRootPath, Constants.WebRoot, _webRootPath);
+            }else
+            {
+                _webRootPath = Path.Combine(SiteRootPath, Constants.WebRoot);
+            }
             _deploymentsPath = Path.Combine(SiteRootPath, Constants.DeploymentCachePath);
             _deploymentToolsPath = Path.Combine(_deploymentsPath, Constants.DeploymentToolsPath);
             _siteExtensionSettingsPath = Path.Combine(SiteRootPath, Constants.SiteExtensionsCachePath);
