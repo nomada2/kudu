@@ -151,7 +151,7 @@ echo $i > pushinfo
         {
             using (var repo = new LibGit2Sharp.Repository(RepositoryPath))
             {
-                repo.Stage(path);
+                LibGit2Sharp.Commands.Stage(repo, path);
             }
         }
 
@@ -170,15 +170,17 @@ echo $i > pushinfo
                     return false;
                 }
 
-                repo.Stage(changes);
+                LibGit2Sharp.Commands.Stage(repo, changes);
                 if (string.IsNullOrWhiteSpace(authorName) ||
                     string.IsNullOrWhiteSpace(emailAddress))
                 {
-                    repo.Commit(message);
+                    var emptyAuthor = new Signature(string.Empty, string.Empty, DateTimeOffset.UtcNow);
+                    repo.Commit(message, emptyAuthor, emptyAuthor);
                 }
                 else
                 {
-                    repo.Commit(message, new Signature(authorName, emailAddress, DateTimeOffset.UtcNow));
+                    var author = new Signature(authorName, emailAddress, DateTimeOffset.UtcNow);
+                    repo.Commit(message, author, author);
                 }
                 return true;
             }
@@ -188,7 +190,7 @@ echo $i > pushinfo
         {
             using (var repo = new LibGit2Sharp.Repository(RepositoryPath))
             {
-                repo.Checkout(id, new CheckoutOptions { CheckoutModifiers = CheckoutModifiers.Force });
+                LibGit2Sharp.Commands.Checkout(repo, id, new CheckoutOptions { CheckoutModifiers = CheckoutModifiers.Force });
             }
         }
 
@@ -225,7 +227,7 @@ echo $i > pushinfo
                     using (tracer.Step("LibGit2SharpRepository Fetch"))
                     {
                         // This will only retrieve the "master"
-                        repo.Network.Fetch(remote);
+                        LibGit2Sharp.Commands.Fetch(repo, remote.Name, remote.RefSpecs.Select(r => r.Specification), new FetchOptions(), "LibGit2SharpRepository Fetch");
                     }
                     
                     using (tracer.Step("LibGit2SharpRepository Update"))
@@ -300,7 +302,7 @@ echo $i > pushinfo
                 if (string.IsNullOrWhiteSpace(startPoint))
                 {
                     var branch = repo.GetOrCreateBranch(branchName);
-                    repo.Checkout(branch);
+                    LibGit2Sharp.Commands.Checkout(repo, branch);
                 }
                 else
                 {
@@ -310,7 +312,7 @@ echo $i > pushinfo
                         throw new LibGit2Sharp.NotFoundException(string.Format("Start point \"{0}\" for reset was not found.", startPoint));
                     }
                     var branch = repo.GetOrCreateBranch(branchName);
-                    repo.Checkout(branch);
+                    LibGit2Sharp.Commands.Checkout(repo, branch);
                     repo.Reset(ResetMode.Hard, commit);
                 }
             }
@@ -354,7 +356,7 @@ echo $i > pushinfo
 
             using (var repo = new LibGit2Sharp.Repository(RepositoryPath))
             {
-                var files = repo.Diff.Compare<TreeChanges>(null, DiffTargets.Index, lookupList, compareOptions: new CompareOptions() { IncludeUnmodified = true, Similarity = SimilarityOptions.None })
+                var files = repo.Diff.Compare<TreeChanges>(null, DiffTargets.Index, lookupList, new ExplicitPathsOptions { ShouldFailOnUnmatchedPath = false }, compareOptions: new CompareOptions() { IncludeUnmodified = true, Similarity = SimilarityOptions.None })
                                       .Select(d => Path.Combine(repo.Info.WorkingDirectory, d.Path))
                                       .Where(p => p.StartsWith(path, StringComparison.OrdinalIgnoreCase));
 
